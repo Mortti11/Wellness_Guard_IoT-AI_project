@@ -47,7 +47,7 @@ def sendWarning():
 
 
 # Path to downloaded pose landmarker model
-MODEL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pose_landmarker_lite.task')
+MODEL_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'models', 'pose_landmarker_lite.task')
 
 app = Flask(__name__)
 CORS(app)

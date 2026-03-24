@@ -6,7 +6,7 @@ node server.js
 
 # Start the posture detection script
 echo "Starting posture detection script..."
-python3 posture_detection.py &
+python3 ../backend/main.py &
 
 # Wait for all background processes to finish
 wait

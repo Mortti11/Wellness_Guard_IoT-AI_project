@@ -1,407 +1,131 @@
-# 🛡️ WellnessGuard
+# WellnessGuard
 
-A comprehensive health monitoring system that combines **real-time posture detection**, **heart rate monitoring**, **step counting**, and **activity tracking** into a unified web dashboard.
+This was a university IoT + ML project I did with classmates. The idea was to combine posture detection and simple sensor data in one dashboard.
 
----
+The main active app in this repo is the Python posture backend in `backend/` and the Node dashboard in `Project_WellnessGuard/`.
 
-## 📋 Table of Contents
+## Overview
 
-- [Overview](#overview)
-- [Features](#features)
-- [System Architecture](#system-architecture)
-- [Project Structure](#project-structure)
-- [Requirements](#requirements)
-- [Installation](#installation)
-- [How to Run](#how-to-run)
-- [Usage Guide](#usage-guide)
-- [API Reference](#api-reference)
-- [Configuration](#configuration)
-- [How It Works](#how-it-works)
+The project has two active parts:
 
----
+- `backend/main.py` runs posture detection with MediaPipe and exposes an MJPEG camera feed.
+- `Project_WellnessGuard/server.js` serves the dashboard, listens to MQTT sensor data, and forwards updates to the browser with Socket.IO.
 
-## 🎯 Overview
+There is also a `legacy/` folder. That folder is for older experiments and reference files. It is not the main app path.
 
-WellnessGuard is designed to help users maintain healthy habits by:
+## What It Does
 
-- **Monitoring posture** in real-time using computer vision
-- **Tracking heart rate** from pulse sensors via MQTT
-- **Counting steps** from pedometer sensors
-- **Alerting users** when they've been in bad posture too long
-- **Reminding users** to move with a configurable timer
+- reads heart rate, step count, and inactivity messages from MQTT
+- shows those values in a web dashboard
+- runs webcam-based posture detection
+- exposes the posture feed at `http://localhost:5000/mjpeg`
+- stores incoming sensor data in a local SQLite database
 
----
+## Team Context
 
-## ✨ Features
+This was a group project done for university coursework around IoT and machine learning. It was not a solo project.
 
-| Feature | Description |
-|---------|-------------|
-| 📷 **Live Posture Detection** | Uses webcam + MediaPipe AI to analyze body posture |
-| ❤️ **Heart Rate Monitoring** | Real-time BPM display from pulse sensors |
-| 📊 **Heart Rate History Chart** | Visual graph of heart rate over time |
-| 👟 **Step Counter** | Tracks daily steps from pedometer |
-| 🏃 **Activity Status** | Shows Active/Inactive based on heart rate |
-| ⏱️ **Move Reminder Timer** | Configurable countdown to remind you to move |
-| 🔴 **Bad Posture Alerts** | Warning after 3 minutes of poor posture |
+## My Role
 
----
+I was the project manager for the team. The direction around the IoT devices and posture detection was mine. I researched how to implement the steps, coded the sensor side, and implemented the posture detection part.
 
-## 🏗️ System Architecture
+## Project Structure
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    WellnessGuard System                     │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  ┌─────────────┐      ┌─────────────┐      ┌─────────────┐ │
-│  │   Webcam    │      │ IoT Sensors │      │    MQTT     │ │
-│  │             │      │(Heart/Steps)│      │   Broker    │ │
-│  └──────┬──────┘      └──────┬──────┘      └──────┬──────┘ │
-│         │                    │                    │        │
-│         ▼                    └────────┬───────────┘        │
-│  ┌─────────────┐                      ▼                    │
-│  │  Posture    │             ┌─────────────┐               │
-│  │  Detection  │             │  Node.js    │               │
-│  │  (Python)   │             │  Server     │               │
-│  │  Port 5000  │             │  Port 3000  │               │
-│  └──────┬──────┘             └──────┬──────┘               │
-│         │                           │                      │
-│         │    MJPEG Stream           │  Socket.IO           │
-│         │                           │                      │
-│         └───────────┬───────────────┘                      │
-│                     ▼                                      │
-│            ┌─────────────────┐                             │
-│            │  Web Dashboard  │                             │
-│            │   (Browser)     │                             │
-│            └─────────────────┘                             │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
+```text
+.
+├── .gitignore
+├── Posture-Detection.code-workspace
+├── README.md
+├── requirements.txt
+├── backend/
+│   ├── main.py
+│   └── posture_detection.py
+├── models/
+│   └── pose_landmarker_lite.task
+├── legacy/
+│   ├── mqtt_test.py
+│   ├── posture.py
+│   ├── posture_test.py
+│   ├── stepcounter.py
+│   ├── test.py
+│   └── templates/
+│       ├── back-end.py
+│       └── mqtt_test.html
+└── Project_WellnessGuard/
+    ├── index.html
+    ├── package.json
+    ├── script.js
+    ├── server.js
+    └── start_services.sh
 ```
 
----
+## Requirements
 
-## 📁 Project Structure
+- Python 3
+- Node.js
+- an MQTT broker running on `localhost:1883`
+- a webcam for the posture detection part
 
-```
-Posture-Detection/
-│
-├── main.py                    # Main posture detection server (Flask + MediaPipe)
-├── posture.py                 # Alternative posture detection implementation
-├── posture_detection.py       # Utility functions (distance/angle calculations)
-├── mqtt_test.py               # Flask + MQTT + SocketIO backend
-├── test.py                    # Webcam testing utility
-├── stepcounter.py             # Step counter module (placeholder)
-├── requirements.txt           # Python dependencies
-│
-├── Project_WellnessGuard/     # Main web application
-│   ├── server.js              # Node.js server (MQTT + Socket.IO + SQLite)
-│   ├── index.html             # Web dashboard UI
-│   ├── script.js              # Dashboard JavaScript logic
-│   └── start_services.sh      # Startup script (Linux/Mac)
-│
-└── templates/                 # Flask templates
-    ├── back-end.py            # Alternative MQTT backend
-    └── mqtt_test.html         # Simple MQTT message display
-```
+The repo also includes `requirements.txt`. It looks like a broad environment export rather than a small project-only dependency list, so I would treat it carefully.
 
----
+## Setup
 
-## 📦 Requirements
+For the active Python backend, `backend/main.py` imports:
 
-### Software Prerequisites
+- `numpy`
+- `opencv-python`
+- `mediapipe`
+- `flask`
+- `flask-cors`
 
-| Software | Version | Purpose |
-|----------|---------|---------|
-| Python | 3.8+ | Posture detection backend |
-| Node.js | 16+ | Web server backend |
-| MQTT Broker | (Mosquitto) | IoT message routing |
-
-### Python Packages
-
-```
-opencv-python      # Video capture and processing
-mediapipe          # AI pose estimation
-flask              # Web server
-flask-mqtt         # MQTT integration
-flask-socketio     # WebSocket support
-eventlet           # Async networking
-numpy              # Numerical operations
-```
-
-### Node.js Packages
-
-```
-express            # Web server
-socket.io          # Real-time communication
-mqtt               # MQTT client
-sqlite3            # Database
-```
-
----
-
-## 🔧 Installation
-
-### Step 1: Clone the Repository
-
-```bash
-git clone https://github.com/Ehalkola/Project_WellnessGuard.git
-cd Posture-Detection
-```
-
-### Step 2: Install Python Dependencies
-
-```bash
-pip install opencv-python mediapipe flask flask-mqtt flask-socketio eventlet numpy
-```
-
-### Step 3: Install Node.js Dependencies
+For the Node side, install packages from `Project_WellnessGuard/package.json`:
 
 ```bash
 cd Project_WellnessGuard
-npm install express socket.io mqtt sqlite3
+npm install
 ```
 
-### Step 4: Install MQTT Broker (Mosquitto)
+## How to Run
 
-**Windows:**
-Download from https://mosquitto.org/download/
+The manual startup path is the clearest one for the current repo.
 
-**Linux (Ubuntu/Debian):**
-```bash
-sudo apt install mosquitto mosquitto-clients
-```
-
-**macOS:**
-```bash
-brew install mosquitto
-```
-
----
-
-## 🚀 How to Run
-
-### Option 1: Using Shell Script (Linux/Mac)
+1. Start an MQTT broker on `localhost:1883`.
+2. Start the posture backend:
 
 ```bash
-cd Project_WellnessGuard
-chmod +x start_services.sh
-./start_services.sh
+python backend/main.py
 ```
 
-### Option 2: Manual Startup (All Platforms)
+3. Start the dashboard server:
 
-Open **4 separate terminals**:
-
-**Terminal 1 - Start MQTT Broker:**
-```bash
-mosquitto
-```
-
-**Terminal 2 - Start Posture Detection Server:**
-```bash
-python main.py
-```
-
-**Terminal 3 - Start Node.js Server:**
 ```bash
 cd Project_WellnessGuard
 node server.js
 ```
 
-**Terminal 4 - Open Dashboard:**
-Open `Project_WellnessGuard/index.html` in a web browser
+4. Open the dashboard at `http://localhost:3000`.
 
-### Access Points
+Notes:
 
-| Service | URL |
-|---------|-----|
-| Web Dashboard | Open `index.html` in browser |
-| Posture Camera Feed | http://localhost:5000/mjpeg |
-| Node.js API | http://localhost:3000 |
+- The browser should connect through the running server at `http://localhost:3000`.
+- Do not open `Project_WellnessGuard/index.html` directly as a file if you want the live Socket.IO dashboard to work.
+- `Project_WellnessGuard/start_services.sh` exists, but the manual steps above are the clearer documented path.
 
----
+## MQTT Topics
 
-## 📖 Usage Guide
+The active Node server listens for these topics:
 
-### 1. Posture Detection
+- `pulsesensor/bpm`
+- `stepcounter/steps`
+- `stepcounter/inactivity`
 
-1. Position your webcam to capture a **side view** of yourself
-2. Sit in your normal position
-3. The system will display:
-   - **Green lines** = Good posture ✅
-   - **Red lines** = Bad posture ❌
-4. Watch for the "Aligned" / "Not Aligned" indicator in the top-right
-5. After **3 minutes** of bad posture, you'll receive an alert
+## Troubleshooting
 
-### 2. Move Reminder Timer
+- If the dashboard opens but does not update, make sure the Node server is running and you opened `http://localhost:3000`.
+- If the posture feed does not load, make sure `backend/main.py` is running and the webcam is available.
+- If MediaPipe cannot load the model, check that `models/pose_landmarker_lite.task` exists.
+- If sensor data does not appear, check that the MQTT broker is running on `localhost:1883` and that the topic names match.
 
-1. Enter the number of minutes in the input field
-2. Click **Start** to begin countdown
-3. Click **Pause** to pause the timer
-4. Click **Reset** to restart from the beginning
-5. When timer reaches zero, you'll get an alert to move
+## Closing Note
 
-### 3. Heart Rate & Steps
-
-- Connect your IoT sensors (Arduino/ESP32) to the MQTT broker
-- Publish heart rate to: `pulsesensor/bpm`
-- Publish step count to: `stepcounter/steps`
-- Publish activity status to: `stepcounter/inactivity`
-
----
-
-## 📡 API Reference
-
-### Posture Detection Server (Port 5000)
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/` | GET | Main page |
-| `/mjpeg` | GET | MJPEG video stream with posture overlay |
-
-### MQTT Topics
-
-| Topic | Data Type | Description |
-|-------|-----------|-------------|
-| `pulsesensor/bpm` | Integer | Heart rate in beats per minute |
-| `stepcounter/steps` | Integer | Current step count |
-| `stepcounter/inactivity` | String | Activity status message |
-
-### Socket.IO Events
-
-| Event | Direction | Data |
-|-------|-----------|------|
-| `mqtt_message` | Server → Client | `{topic, payload}` |
-| `connect` | Client → Server | Connection established |
-| `disconnect` | Client → Server | Connection closed |
-
----
-
-## ⚙️ Configuration
-
-### Camera Settings (main.py / posture.py)
-
-```python
-device = 0                              # Camera index (0 = default)
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280) # Width in pixels
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720) # Height in pixels
-cap.set(cv2.CAP_PROP_FPS, 30)           # Frames per second
-```
-
-### MQTT Settings (mqtt_test.py)
-
-```python
-MQTT_BROKER_URL = '127.0.0.1'   # Broker IP address
-MQTT_BROKER_PORT = 1883         # Broker port
-MQTT_KEEPALIVE = 5              # Keep-alive interval (seconds)
-```
-
-### Posture Thresholds (main.py)
-
-```python
-# Good posture criteria:
-neck_inclination < 40    # Neck angle less than 40 degrees
-torso_inclination < 10   # Torso angle less than 10 degrees
-
-# Camera alignment:
-offset < 100             # Shoulder distance threshold for side view
-```
-
----
-
-## 🔬 How It Works
-
-### Posture Detection Algorithm
-
-1. **Capture** video frame from webcam
-2. **Process** with MediaPipe Pose to detect body landmarks
-3. **Extract** key points: shoulders, ear, hip
-4. **Calculate** angles:
-   - **Neck Inclination**: Angle between shoulder-ear line and vertical
-   - **Torso Inclination**: Angle between hip-shoulder line and vertical
-5. **Evaluate** posture:
-   - If neck < 40° AND torso < 10° → **Good Posture**
-   - Otherwise → **Bad Posture**
-6. **Track** time spent in each posture state
-7. **Alert** if bad posture exceeds 180 seconds
-
-### Body Landmarks Used
-
-```
-       👂 Ear
-        │
-        │  ← Neck Angle
-        │
-       ─┼─ Shoulders
-        │
-        │  ← Torso Angle
-        │
-       ─┼─ Hip
-```
-
-### Visual Feedback Colors
-
-| Color | Meaning |
-|-------|---------|
-| 🟢 Green | Good posture indicators |
-| 🔴 Red | Bad posture indicators |
-| 🟡 Yellow | Body landmark points |
-| 💗 Pink | Right shoulder marker |
-
----
-
-## 🗄️ Database Schema (SQLite)
-
-The Node.js server stores sensor data in `mytopic.db`:
-
-```sql
--- Heart rate readings
-CREATE TABLE heartrate (
-    timestamp TEXT,
-    bpm INTEGER
-);
-
--- Step count readings  
-CREATE TABLE steps (
-    timestamp TEXT,
-    steps INTEGER
-);
-
--- Inactivity alerts
-CREATE TABLE inactivity (
-    timestamp TEXT,
-    status TEXT
-);
-```
-
----
-
-## 🐛 Troubleshooting
-
-| Issue | Solution |
-|-------|----------|
-| Camera not detected | Check `device` variable (try 0, 1, or `/dev/video0`) |
-| "Not Aligned" warning | Position camera for side view of your body |
-| MQTT not connecting | Ensure Mosquitto broker is running |
-| No sensor data | Check MQTT topic names match exactly |
-| Video stream lag | Reduce resolution or frame rate |
-
----
-
-## 📄 License
-
-This project is open source and available under the MIT License.
-
----
-
-## 👥 Contributors
-
-- **Ehalkola** - Project Owner
-
----
-
-## 🔗 Links
-
-- Repository: https://github.com/Ehalkola/Project_WellnessGuard
-- MediaPipe Documentation: https://mediapipe.dev/
-- Mosquitto MQTT: https://mosquitto.org/
+This repo still includes older files in `legacy/` because they are useful as reference for the project history. For the current runnable path, focus on `backend/`, `models/`, and `Project_WellnessGuard/`.
