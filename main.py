@@ -1,8 +1,12 @@
 import numpy as np
 import cv2
 import math as m
+import os
 import mediapipe as mp
+from mediapipe.tasks import python as mp_tasks
+from mediapipe.tasks.python import vision as mp_vision
 from flask import Flask, Response, render_template
+from flask_cors import CORS
 
 #from posture_detection import findDistance, findAngle
 
@@ -38,11 +42,15 @@ def findAngle(x1, y1, x2, y2):
     degree = int(180 / m.pi) * theta
     return degree
 
-def sendWarning(x):
+def sendWarning():
     pass
 
 
+# Path to downloaded pose landmarker model
+MODEL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pose_landmarker_lite.task')
+
 app = Flask(__name__)
+CORS(app)
 
 
 @app.route("/")
@@ -65,70 +73,64 @@ def test():
 
 
 
-def gather_img():
+# Landmark indices for the new mediapipe Tasks API
+LEFT_SHOULDER  = 11
+RIGHT_SHOULDER = 12
+LEFT_EAR       = 7
+LEFT_HIP       = 23
 
-    # =============================CONSTANTS and INITIALIZATIONS=====================================#
-    # Initilize frame counters.
+
+def gather_img():
     good_frames = 0
     bad_frames = 0
 
-    # Font type.
     font = cv2.FONT_HERSHEY_SIMPLEX
-
-    # Colors.
-    blue = (255, 127, 0)
-    red = (50, 50, 255)
-    green = (127, 255, 0)
-    dark_blue = (127, 20, 0)
+    red         = (50, 50, 255)
+    green       = (127, 255, 0)
     light_green = (127, 233, 100)
-    yellow = (0, 255, 255)
-    pink = (255, 0, 255)
+    yellow      = (0, 255, 255)
+    pink        = (255, 0, 255)
 
-    # Initialize mediapipe pose class.
-    mp_pose = mp.solutions.pose
-    pose = mp_pose.Pose()
-    # ===============================================================================================#
-
+    # Initialize mediapipe PoseLandmarker (new Tasks API)
+    base_options = mp_tasks.BaseOptions(model_asset_path=MODEL_PATH)
+    options = mp_vision.PoseLandmarkerOptions(
+        base_options=base_options,
+        running_mode=mp_vision.RunningMode.IMAGE
+    )
+    detector = mp_vision.PoseLandmarker.create_from_options(options)
 
     while True:
-        #time.sleep(0.01)
         success, image = cap.read()
         if not success:
             print("Null.Frames")
-            #break
+            continue
         try:
-            # Get fps.
             fps = cap.get(cv2.CAP_PROP_FPS)
-            # Get height and width.
             h, w = image.shape[:2]
 
-            # Convert the BGR image to RGB.
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            # Convert BGR to RGB for mediapipe
+            rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_image)
 
-            # Process the image.
-            keypoints = pose.process(image)
+            # Run pose detection
+            result = detector.detect(mp_image)
 
-            # Convert the image back to BGR.
-            image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+            # If no person detected, stream the raw frame
+            if not result.pose_landmarks:
+                _, jpeg = cv2.imencode('.jpg', image)
+                yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + jpeg.tobytes() + b'\r\n')
+                continue
 
-            # Use lm and lmPose as representative of the following methods.
-            lm = keypoints.pose_landmarks
-            lmPose = mp_pose.PoseLandmark
+            landmarks = result.pose_landmarks[0]
 
-            # Acquire the landmark coordinates.
-            # Once aligned properly, left or right should not be a concern.      
-            # Left shoulder.
-            l_shldr_x = int(lm.landmark[lmPose.LEFT_SHOULDER].x * w)
-            l_shldr_y = int(lm.landmark[lmPose.LEFT_SHOULDER].y * h)
-            # Right shoulder
-            r_shldr_x = int(lm.landmark[lmPose.RIGHT_SHOULDER].x * w)
-            r_shldr_y = int(lm.landmark[lmPose.RIGHT_SHOULDER].y * h)
-            # Left ear.
-            l_ear_x = int(lm.landmark[lmPose.LEFT_EAR].x * w)
-            l_ear_y = int(lm.landmark[lmPose.LEFT_EAR].y * h)
-            # Left hip.
-            l_hip_x = int(lm.landmark[lmPose.LEFT_HIP].x * w)
-            l_hip_y = int(lm.landmark[lmPose.LEFT_HIP].y * h)
+            l_shldr_x = int(landmarks[LEFT_SHOULDER].x * w)
+            l_shldr_y = int(landmarks[LEFT_SHOULDER].y * h)
+            r_shldr_x = int(landmarks[RIGHT_SHOULDER].x * w)
+            r_shldr_y = int(landmarks[RIGHT_SHOULDER].y * h)
+            l_ear_x   = int(landmarks[LEFT_EAR].x * w)
+            l_ear_y   = int(landmarks[LEFT_EAR].y * h)
+            l_hip_x   = int(landmarks[LEFT_HIP].x * w)
+            l_hip_y   = int(landmarks[LEFT_HIP].y * h)
 
             # Calculate distance between left shoulder and right shoulder points.
             offset = findDistance(l_shldr_x, l_shldr_y, r_shldr_x, r_shldr_y)
@@ -210,8 +212,8 @@ def gather_img():
 
             _, jpeg = cv2.imencode('.jpg', image)
             yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + jpeg.tobytes() + b'\r\n')
-        except Exception:
-            print("error")
+        except Exception as e:
+            print("error", e)
             _, jpeg = cv2.imencode('.jpg', image)
             yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + jpeg.tobytes() + b'\r\n')
 

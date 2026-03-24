@@ -128,16 +128,18 @@ const socket = io();
 // Listen for 'mqtt_message' events
 socket.on('mqtt_message', (data) => {
   const messages = document.getElementById('messages');
-  const messageItem = document.createElement('li');
-  messageItem.textContent = `Topic: ${data.topic}, Payload: ${data.payload}`;
-  messages.appendChild(messageItem);
+  if (messages) {
+    const messageItem = document.createElement('li');
+    messageItem.textContent = `Topic: ${data.topic}, Payload: ${data.payload}`;
+    messages.appendChild(messageItem);
+  }
 
   // Update UI based on topic
-  if (data.topic === 'home/mytopic/stepcounter/steps') {
+  if (data.topic === 'stepcounter/steps') {
     document.getElementById('steps').textContent = data.payload;
-  } else if (data.topic === 'home/mytopic/stepcounter/inactivity') {
+  } else if (data.topic === 'stepcounter/inactivity') {
     document.getElementById('activity-status').textContent = data.payload;
-  } else if (data.topic === 'home/mytopic/heartrate/bpm') {
+  } else if (data.topic === 'pulsesensor/bpm') {
     document.getElementById('heart-rate').textContent = `${data.payload} bpm`;
     updateHeartRate(data.payload);
   }

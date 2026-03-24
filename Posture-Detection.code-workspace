@@ -3,5 +3,9 @@
 		{
 			"path": "."
 		}
-	]
+	],
+	"settings": {
+		"editor.stickyScroll.defaultModel": "foldingProviderModel",
+		"chat.planAgent.defaultModel": ""
+	}
 }

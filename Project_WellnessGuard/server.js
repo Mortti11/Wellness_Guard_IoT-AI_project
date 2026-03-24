@@ -4,17 +4,18 @@ const socketIo = require('socket.io');
 const mqtt = require('mqtt');
 const sqlite3 = require('sqlite3').verbose();
 
+const path = require('path');
+
 const app = express();
 const server = http.createServer(app);
 
-const io = socketIo(server, {
-  cors: {
-    origin: "", // Replace "" with your client origin for better security, e.g., "http://localhost:3000"
-    methods: ["GET", "POST"],
-    allowedHeaders: ["Content-Type"],
-    credentials: true
-  }
+// Serve the frontend
+app.use(express.static(path.join(__dirname)));
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
+
+const io = socketIo(server);
 
 // MQTT client setup
 const mqttClient = mqtt.connect('mqtt://localhost');
@@ -56,6 +57,12 @@ const db = new sqlite3.Database('mytopic.db', (err) => {
   } else {
     console.log('Connected to SQLite database');
   }
+});
+
+db.serialize(() => {
+  db.run('CREATE TABLE IF NOT EXISTS heartrate (timestamp TEXT, bpm INTEGER)');
+  db.run('CREATE TABLE IF NOT EXISTS steps (timestamp TEXT, steps INTEGER)');
+  db.run('CREATE TABLE IF NOT EXISTS inactivity (timestamp TEXT, status TEXT)');
 });
 
 // Start the server with a specific host and port
